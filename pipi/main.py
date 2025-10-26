@@ -1,6 +1,7 @@
 from modules.wakeword import DualWakeWordDetector
 import cv2
 from picamera2 import Picamera2
+from picamera2.encoders import H264Encoder
 import sounddevice as sd
 import soundfile as sf
 import threading
@@ -50,8 +51,9 @@ def main():
                     picam2.start()
 
                     # Start video recording
-                    video_path = os.path.join("temp_storage", "video.h264")
-                    picam2.start_recording(video_path)
+                    video_path = os.path.join("temp_storage", "video.mp4")
+                    encoder = H264Encoder()
+                    picam2.start_recording(encoder, video_path)
 
                     # Start audio recording
                     audio_frames.clear()
