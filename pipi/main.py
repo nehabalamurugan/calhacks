@@ -1,6 +1,10 @@
 from modules.wakeword import DualWakeWordDetector
 import cv2
 from picamera2 import Picamera2
+import sounddevice as sd
+import soundfile as sf
+import threading
+import os
 
 ACCESS_KEY_HI = "XSArA+g6/iL1DzbxjNl5Jophef8aWqfhyc899ZddK40AJWqdoptdbw=="  # replace with your actual key for "hi"
 KEYWORD_PATH_HI = "assets/hi.ppn"  # adjust to where your .ppn file for "hi" actually is
@@ -17,6 +21,22 @@ def main():
     )
 
     picam2 = None
+    audio_recording = False
+    audio_frames = []
+    audio_thread = None
+    stop_audio_event = threading.Event()
+
+    os.makedirs("temp_storage", exist_ok=True)
+
+    def audio_callback(indata, frames, time, status):
+        if status:
+            print(status)
+        audio_frames.append(indata.copy())
+
+    def record_audio():
+        with sd.InputStream(samplerate=44100, channels=1, callback=audio_callback):
+            stop_audio_event.wait()
+
     try:
         while True:
             # Wait for either wake word
@@ -29,38 +49,89 @@ def main():
                     picam2.set_controls({"AfMode": 2, "AeEnable": True, "AwbEnable": True})
                     picam2.start()
 
-                    print("✅ Camera stream started. Press 'q' to quit.")
-                    cv2.namedWindow("Camera Stream", cv2.WINDOW_NORMAL)
-                    cv2.resizeWindow("Camera Stream", 960, 540)
+                    # Start video recording
+                    video_path = os.path.join("temp_storage", "video.h264")
+                    picam2.start_recording(video_path)
 
-                    while True:
-                        frame = picam2.capture_array()
-                        cv2.imshow("Camera Stream", frame)
-                        if cv2.waitKey(1) & 0xFF == ord('q'):
-                            break
-                        # Also check if "bye" is detected while streaming
-                        detected_word = detector.listen(non_blocking=True)
-                        if detected_word == "bye":
-                            break
+                    # Start audio recording
+                    audio_frames.clear()
+                    stop_audio_event.clear()
+                    audio_thread = threading.Thread(target=record_audio)
+                    audio_thread.start()
+                    audio_recording = True
+
+                    print("✅ Recording started. Say 'bye' to stop.")
+
+                # Wait for "bye" to stop recording
+                while True:
+                    detected_word = detector.listen(non_blocking=True)
+                    if detected_word == "bye":
+                        break
+
+                # Stop recording
+                if picam2 is not None and audio_recording:
+                    picam2.stop_recording()
+
+                    stop_audio_event.set()
+                    audio_thread.join()
+                    audio_recording = False
+
+                    # Save audio file
+                    audio_path = os.path.join("temp_storage", "audio.wav")
+                    audio_data = b''.join([frame.tobytes() for frame in audio_frames])
+                    audio_array = b''.join([frame.tobytes() for frame in audio_frames])
+                    import numpy as np
+                    audio_np = np.concatenate(audio_frames, axis=0)
+                    sf.write(audio_path, audio_np, 44100)
 
                     picam2.stop()
-                    cv2.destroyAllWindows()
+                    try:
+                        picam2.close()
+                    except Exception:
+                        pass
+                    del picam2
                     picam2 = None
-                    print("🛑 Camera stream stopped. Returning to listening.")
+
+                    print(f"🛑 Recording stopped. Video saved to {video_path}, audio saved to {audio_path}. Returning to listening.")
+
             elif word == "bye":
-                if picam2 is not None:
+                if picam2 is not None and audio_recording:
+                    picam2.stop_recording()
+
+                    stop_audio_event.set()
+                    audio_thread.join()
+                    audio_recording = False
+
+                    audio_path = os.path.join("temp_storage", "audio.wav")
+                    import numpy as np
+                    audio_np = np.concatenate(audio_frames, axis=0)
+                    sf.write(audio_path, audio_np, 44100)
+
                     picam2.stop()
-                    cv2.destroyAllWindows()
+                    try:
+                        picam2.close()
+                    except Exception:
+                        pass
+                    del picam2
                     picam2 = None
-                    print("🛑 Camera stream stopped. Returning to listening.")
+
+                    print(f"🛑 Recording stopped. Video saved to {video_path}, audio saved to {audio_path}. Returning to listening.")
 
     except KeyboardInterrupt:
         print("Exiting...")
     finally:
         detector.stop()
         if picam2 is not None:
+            if audio_recording:
+                picam2.stop_recording()
+                stop_audio_event.set()
+                audio_thread.join()
             picam2.stop()
-            cv2.destroyAllWindows()
+            try:
+                picam2.close()
+            except Exception:
+                pass
+            del picam2
 
 if __name__ == "__main__":
     main()
