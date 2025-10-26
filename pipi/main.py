@@ -57,19 +57,19 @@ def main():
                 if picam2 is None:
                     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                     picam2 = Picamera2()
-                    config = picam2.create_video_configuration(main={"format": "RGB888", "size": (1920, 1080)})
+                    # Configure with ISP-processed output and auto white balance for better color
+                    config = picam2.create_video_configuration(main={"size": (1920, 1080)})
                     picam2.configure(config)
                     picam2.start()
 
-                    # Disable auto white balance and manually correct blue tint
                     picam2.set_controls({
-                        "AwbEnable": False,
-                        "ColourGains": (2.2, 1.0),  # Increase red, reduce blue
-                        "Brightness": 0.0,
-                        "Contrast": 1.2,
-                        "Saturation": 1.4,
+                        "AwbEnable": True,
+                        "ExposureValue": 0.0,
+                        "Contrast": 1.1,
+                        "Saturation": 1.2,
+                        "Sharpness": 1.1,
                     })
-                    print("🎨 Manual white balance applied (red boosted, blue reduced).")
+                    print("🎨 Auto white balance and standard ISP tuning applied for natural colors.")
 
                     # Start video recording
                     video_path = os.path.join("temp_storage", f"video_{timestamp}.mp4")
