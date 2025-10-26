@@ -38,7 +38,11 @@ def transcribe_audio(audio_file: str = "temp_storage/audio.wav", start_phrase: s
     transcript = transcriber.transcribe(audio_file)
     
     # Wait for completion using built-in method
-    transcript = transcriber.wait_for_completion(transcript.id)
+    while transcript.status not in ['completed','error']:
+        print(f'Status: {transcript.status}...waiting')
+        transcript = transcriber.get_transcript(transcript.id)
+        import time
+        time.sleep(5)
     
   except Exception as e:
     print(f"Transcription error: {e}")
