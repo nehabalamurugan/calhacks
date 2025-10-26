@@ -56,6 +56,7 @@ Thumbs.db
 *.aac
 *.flac
 *.ogg
+*.mp4
 
 # JSON output files
 *_transcription.json
