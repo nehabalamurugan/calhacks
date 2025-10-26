@@ -35,7 +35,7 @@ def transcribe_audio(audio_file: str = "temp_storage/audio.wav", start_phrase: s
   
   try:
     # For files longer than 5 minutes, use async transcription
-    transcript = transcriber.transcribe(aai.TranscriptionInput.from_file(audio_file))
+    transcript = transcriber.transcribe(audio_file)
     
     # Wait for completion using built-in method
     transcript = transcriber.wait_for_completion(transcript.id)
