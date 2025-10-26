@@ -59,14 +59,17 @@ def main():
                     picam2 = Picamera2()
                     config = picam2.create_video_configuration(main={"format": "RGB888", "size": (1920, 1080)})
                     picam2.configure(config)
-                    picam2.set_controls({
-                        "AwbEnable": True,
-                        "AeEnable": True,
-                        "Brightness": 0.0,
-                        "Contrast": 1.1,
-                        "Saturation": 1.3,
-                    })
                     picam2.start()
+
+                    # Disable auto white balance and manually correct blue tint
+                    picam2.set_controls({
+                        "AwbEnable": False,
+                        "ColourGains": (2.2, 1.0),  # Increase red, reduce blue
+                        "Brightness": 0.0,
+                        "Contrast": 1.2,
+                        "Saturation": 1.4,
+                    })
+                    print("🎨 Manual white balance applied (red boosted, blue reduced).")
 
                     # Start video recording
                     video_path = os.path.join("temp_storage", f"video_{timestamp}.mp4")
