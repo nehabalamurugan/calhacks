@@ -114,7 +114,8 @@ def main():
                     print(f"Transcript:\n{transcript}")
                     transcript_path = os.path.join("temp_storage", f"transcript_{timestamp}.txt")
                     with open(transcript_path, "w") as f:
-                        f.write(transcript)
+                        transcript_text = "\n".join([x["speaker"]+": "+x["text"] for x in transcript])
+                        f.write(transcript_text)
 
             elif word == "bye":
                 if picam2 is not None and audio_recording:
@@ -124,7 +125,7 @@ def main():
                     audio_thread.join()
                     audio_recording = False
 
-                    audio_path = os.path.join("temp_storage", f"audio_{timestamp}.wav")
+                    audio_path = os.path.join("/home/babapi/calhacks/pipi/temp_storage", f"audio_{timestamp}.wav")
                     import numpy as np
                     audio_np = np.concatenate(audio_frames, axis=0)
                     sf.write(audio_path, audio_np, 44100)
@@ -141,7 +142,7 @@ def main():
 
                     transcript = transcribe_audio(audio_path)
                     print(f"Transcript:\n{transcript}")
-                    transcript_path = os.path.join("temp_storage", f"transcript_{timestamp}.txt")
+                    transcript_path = os.path.join("/home/babapi/calhacks/pipi/temp_storage", f"transcript_{timestamp}.txt")
                     with open(transcript_path, "w") as f:
                         f.write(transcript)
 
