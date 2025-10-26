@@ -14,8 +14,9 @@ def main():
 
         # Once heard, open a camera stream using picamera2
         picam2 = Picamera2()
-        preview_config = picam2.create_preview_configuration()
-        picam2.configure(preview_config)
+        config = picam2.create_still_configuration(main={"format": "RGB888", "size": (4056, 3040)})
+        picam2.configure(config)
+        picam2.set_controls({"AfMode": 1, "AeEnable": True, "AwbEnable": True})
         picam2.start()
 
         print("✅ Camera stream started. Press 'q' to quit.")
