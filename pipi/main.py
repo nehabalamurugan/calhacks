@@ -6,6 +6,9 @@ import sounddevice as sd
 import soundfile as sf
 import threading
 import os
+from datetime import datetime
+from modules.assemblyai_test import transcribe_audio
+import time
 
 ACCESS_KEY_HI = "XSArA+g6/iL1DzbxjNl5Jophef8aWqfhyc899ZddK40AJWqdoptdbw=="  # replace with your actual key for "hi"
 KEYWORD_PATH_HI = "assets/hi.ppn"  # adjust to where your .ppn file for "hi" actually is
@@ -38,12 +41,21 @@ def main():
         with sd.InputStream(samplerate=44100, channels=1, callback=audio_callback):
             stop_audio_event.wait()
 
+    def capture_images(timestamp):
+        for i in range(1, 4):
+            time.sleep(5)
+            image = picam2.capture_array()
+            image_path = os.path.join("temp_storage", f"image_{timestamp}_{i}.jpg")
+            cv2.imwrite(image_path, cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
+            print(f"📸 Snapshot {i} saved to {image_path}")
+
     try:
         while True:
             # Wait for either wake word
             word = detector.listen()
             if word == "hi":
                 if picam2 is None:
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                     picam2 = Picamera2()
                     config = picam2.create_video_configuration(main={"format": "RGB888", "size": (1920, 1080)}, controls={"FrameDurationLimits": (33333, 33333)})
                     picam2.configure(config)
@@ -51,7 +63,7 @@ def main():
                     picam2.start()
 
                     # Start video recording
-                    video_path = os.path.join("temp_storage", "video.mp4")
+                    video_path = os.path.join("temp_storage", f"video_{timestamp}.mp4")
                     encoder = H264Encoder()
                     picam2.start_recording(encoder, video_path)
 
@@ -61,6 +73,10 @@ def main():
                     audio_thread = threading.Thread(target=record_audio)
                     audio_thread.start()
                     audio_recording = True
+
+                    # Start image capture thread
+                    image_thread = threading.Thread(target=capture_images, args=(timestamp,))
+                    image_thread.start()
 
                     print("✅ Recording started. Say 'bye' to stop.")
 
@@ -79,9 +95,7 @@ def main():
                     audio_recording = False
 
                     # Save audio file
-                    audio_path = os.path.join("temp_storage", "audio.wav")
-                    audio_data = b''.join([frame.tobytes() for frame in audio_frames])
-                    audio_array = b''.join([frame.tobytes() for frame in audio_frames])
+                    audio_path = os.path.join("temp_storage", f"audio_{timestamp}.wav")
                     import numpy as np
                     audio_np = np.concatenate(audio_frames, axis=0)
                     sf.write(audio_path, audio_np, 44100)
@@ -95,6 +109,12 @@ def main():
                     picam2 = None
 
                     print(f"🛑 Recording stopped. Video saved to {video_path}, audio saved to {audio_path}. Returning to listening.")
+
+                    transcript = transcribe_audio(audio_path)
+                    print(f"Transcript:\n{transcript}")
+                    transcript_path = os.path.join("temp_storage", f"transcript_{timestamp}.txt")
+                    with open(transcript_path, "w") as f:
+                        f.write(transcript)
 
             elif word == "bye":
                 if picam2 is not None and audio_recording:
@@ -104,7 +124,7 @@ def main():
                     audio_thread.join()
                     audio_recording = False
 
-                    audio_path = os.path.join("temp_storage", "audio.wav")
+                    audio_path = os.path.join("temp_storage", f"audio_{timestamp}.wav")
                     import numpy as np
                     audio_np = np.concatenate(audio_frames, axis=0)
                     sf.write(audio_path, audio_np, 44100)
@@ -118,6 +138,12 @@ def main():
                     picam2 = None
 
                     print(f"🛑 Recording stopped. Video saved to {video_path}, audio saved to {audio_path}. Returning to listening.")
+
+                    transcript = transcribe_audio(audio_path)
+                    print(f"Transcript:\n{transcript}")
+                    transcript_path = os.path.join("temp_storage", f"transcript_{timestamp}.txt")
+                    with open(transcript_path, "w") as f:
+                        f.write(transcript)
 
     except KeyboardInterrupt:
         print("Exiting...")
