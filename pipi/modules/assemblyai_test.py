@@ -88,18 +88,18 @@ def extract_info(conversation_turns: list):
             conversation_text += f"{turn['speaker']}: {turn['text']}\n"
         
         prompt = f"""
-        Analyze this conversation and extract:
+        Analyze this conversation and extract whatever details are available in the transcript:
         1. The name of the other speaker (not Ina)
-        2. Their company/organization  
-        3. Their date of birth (if mentioned)
-        4. A summary of what was discussed
+        2. Their affiliation like school/company/organization  
+        3. Their date of birth (if fully mentioned with day, month, and year)
+        4. Additional short notes about the person that are important beyond this conversation in a few sentences
         
         Return ONLY valid JSON in this format:
         {{
           "other_speaker_name": "name or null",
-          "company": "company or null", 
+          "affiliation": "affiliation or null", 
           "date_of_birth": "date or null",
-          "conversation_summary": "summary text"
+          "notes": "notes text or null"
         }}
         
         Conversation:
@@ -128,9 +128,9 @@ def extract_info(conversation_turns: list):
         print(f"Error extracting info: {e}")
         data = {
             "other_speaker_name": None,
-            "company": None,
+            "affiliation": None,
             "date_of_birth": None,
-            "conversation_summary": "Error processing conversation"
+            "notes": None
         }
 
     return data

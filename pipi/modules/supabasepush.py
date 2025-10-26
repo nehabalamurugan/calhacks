@@ -65,7 +65,7 @@ def create_fake_conversation_turns():
     return turns
 
 
-def process_conversation_with_supabase(embedding, turns):
+def process_conversation_with_supabase(embedding, turns, person_data):
     """
     Process conversation by calling Supabase functions
     This simulates what the serverless function would do
@@ -116,6 +116,20 @@ def process_conversation_with_supabase(embedding, turns):
 
             person_id = new_person_result.data[0]["id"]
             print(f"Created new person: {person_id}")
+
+        if person_data and person_id:
+            print("Updating person details")
+            update_fields_result = supabase.rpc(
+                "update_person_fields",
+                {
+                        "person_uuid": person_id,
+                        "person_name": person_data.get("other_speaker_name"),
+                        "person_affiliation": person_data.get("affiliation"),
+                        "person_date_of_birth": person_data.get("date_of_birth"),
+                        "person_notes": person_data.get("notes")
+                }
+            ).execute()
+            print(f"{update_fields_result=}")
 
         # 2. Insert conversation
         print("Inserting conversation...")

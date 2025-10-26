@@ -7,7 +7,7 @@ import soundfile as sf
 import threading
 import os
 from datetime import datetime
-from modules.assemblyai_test import transcribe_audio
+from modules.assemblyai_test import transcribe_audio, extract_info
 import time
 from modules.supabasepush import process_conversation_with_supabase, create_face_embedding
 from modules.pineconepush import upload_transcript
@@ -132,12 +132,14 @@ def main():
                     with open(transcript_path, "w") as f:
                         transcript_text = "\n".join([x["speaker"]+": "+x["text"] for x in transcript])
                         f.write(transcript_text)
+                    
+                    person_data =extract_info(transcript)
 
                     # compute image embedding
                     embedding = create_face_embedding(image_path)
 
                     # push image embedding and transcript to supabase
-                    supabase_status = process_conversation_with_supabase(embedding, transcript)
+                    supabase_status = process_conversation_with_supabase(embedding, transcript, person_data)
                     print(f"{supabase_status=}")
                     if supabase_status['success']:
                         pinecone_response = upload_transcript(transcript_path, 
