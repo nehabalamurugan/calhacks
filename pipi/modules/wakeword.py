@@ -1,7 +1,6 @@
 import struct
 import pvporcupine
 import pyaudio
-import select
 
 class DualWakeWordDetector:
     def __init__(self, access_key_hi, keyword_path_hi, access_key_bye, keyword_path_bye):
@@ -49,11 +48,13 @@ class DualWakeWordDetector:
 
         while True:
             if non_blocking:
-                rlist, _, _ = select.select([self.stream], [], [], 0)
-                if not rlist:
+                try:
+                    pcm = self.stream.read(self.porcupine_hi.frame_length, exception_on_overflow=False)
+                except IOError:
                     return None
+            else:
+                pcm = self.stream.read(self.porcupine_hi.frame_length, exception_on_overflow=False)
 
-            pcm = self.stream.read(self.porcupine_hi.frame_length, exception_on_overflow=False)
             pcm = struct.unpack_from("h" * self.porcupine_hi.frame_length, pcm)
             result_hi = self.porcupine_hi.process(pcm)
             result_bye = self.porcupine_bye.process(pcm)
