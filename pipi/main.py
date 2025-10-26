@@ -9,6 +9,7 @@ import os
 from datetime import datetime
 from modules.assemblyai_test import transcribe_audio
 import time
+from modules.supabasepush import process_conversation_with_supabase, create_face_embedding
 print("hi")
 ACCESS_KEY_HI = "XSArA+g6/iL1DzbxjNl5Jophef8aWqfhyc899ZddK40AJWqdoptdbw=="  # replace with your actual key for "hi"
 KEYWORD_PATH_HI = "assets/hi.ppn"  # adjust to where your .ppn file for "hi" actually is
@@ -42,12 +43,15 @@ def main():
             stop_audio_event.wait()
 
     def capture_images(timestamp):
-        for i in range(1, 4):
+        image_paths = []
+        for i in range(1):
             time.sleep(5)
             image = picam2.capture_array()
             image_path = os.path.join("temp_storage", f"image_{timestamp}_{i}.jpg")
+            image_paths.append(image_path)
             cv2.imwrite(image_path, cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
             print(f"📸 Snapshot {i} saved to {image_path}")
+        return image_paths[0]
 
     try:
         while True:
@@ -84,8 +88,10 @@ def main():
                     audio_recording = True
 
                     # Start image capture thread
-                    image_thread = threading.Thread(target=capture_images, args=(timestamp,))
-                    image_thread.start()
+                    # image_thread = threading.Thread(target=capture_images, args=(timestamp,))
+                    # image_thread.start()
+
+                    image_path = capture_images(timestamp)
 
                     print("✅ Recording started. Say 'bye' to stop.")
 
@@ -125,6 +131,13 @@ def main():
                     with open(transcript_path, "w") as f:
                         transcript_text = "\n".join([x["speaker"]+": "+x["text"] for x in transcript])
                         f.write(transcript_text)
+
+                    # compute image embedding
+                    embedding = create_face_embedding(image_path)
+
+                    # push image embedding and transcript to supabase
+                    supabase_status = process_conversation_with_supabase(embedding, transcript)
+                    print(f"{supabase_status=}")
 
             elif word == "bye":
                 if picam2 is not None and audio_recording:
