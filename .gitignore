@@ -52,9 +52,6 @@ ehthumbs.db
 Thumbs.db
 
 # Audio/Video files
-*.wav
-*.mp3
-*.mp4
 *.m4a
 *.aac
 *.flac
