@@ -2,7 +2,7 @@ import struct
 import pvporcupine
 import pyaudio
 
-class WakeWordDetector:
+class DualWakeWordDetector:
     def __init__(self, access_key_hi, keyword_path_hi, access_key_bye, keyword_path_bye):
         """
         access_key_hi: your Picovoice access key for 'hi' wake word
