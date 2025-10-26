@@ -54,30 +54,31 @@ def main():
             # Wait for either wake word
             word = detector.listen()
             if word == "hi":
+                if picam2 is None:
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    picam2 = Picamera2()
+                    config = picam2.create_video_configuration(main={"format": "RGB888", "size": (1920, 1080)}, controls={"FrameDurationLimits": (33333, 33333)})
+                    picam2.configure(config)
+                    picam2.set_controls({"AfMode": 2, "AeEnable": True, "AwbEnable": True})
+                    picam2.start()
 
-                picam2 = Picamera2()
-                config = picam2.create_video_configuration(main={"format": "RGB888", "size": (1920, 1080)})
-                picam2.configure(config)
-                picam2.start()
+                    # Start video recording
+                    video_path = os.path.join("temp_storage", f"video_{timestamp}.mp4")
+                    encoder = H264Encoder()
+                    picam2.start_recording(encoder, video_path)
 
-                # Start video recording
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                video_path = os.path.join("temp_storage", f"video_{timestamp}.mp4")
-                encoder = H264Encoder(bitrate=8000000)
-                picam2.start_recording(encoder, video_path)
+                    # Start audio recording
+                    audio_frames.clear()
+                    stop_audio_event.clear()
+                    audio_thread = threading.Thread(target=record_audio)
+                    audio_thread.start()
+                    audio_recording = True
 
-                # Start audio recording
-                audio_frames.clear()
-                stop_audio_event.clear()
-                audio_thread = threading.Thread(target=record_audio)
-                audio_thread.start()
-                audio_recording = True
+                    # Start image capture thread
+                    image_thread = threading.Thread(target=capture_images, args=(timestamp,))
+                    image_thread.start()
 
-                # Start image capture thread
-                image_thread = threading.Thread(target=capture_images, args=(timestamp,))
-                image_thread.start()
-
-                print("✅ Recording started. Say 'bye' to stop.")
+                    print("✅ Recording started. Say 'bye' to stop.")
 
                 # Wait for "bye" to stop recording
                 while True:
