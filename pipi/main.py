@@ -10,6 +10,7 @@ from datetime import datetime
 from modules.assemblyai_test import transcribe_audio
 import time
 from modules.supabasepush import process_conversation_with_supabase, create_face_embedding
+from modules.pineconepush import upload_transcript
 print("hi")
 ACCESS_KEY_HI = "XSArA+g6/iL1DzbxjNl5Jophef8aWqfhyc899ZddK40AJWqdoptdbw=="  # replace with your actual key for "hi"
 KEYWORD_PATH_HI = "assets/hi.ppn"  # adjust to where your .ppn file for "hi" actually is
@@ -138,6 +139,12 @@ def main():
                     # push image embedding and transcript to supabase
                     supabase_status = process_conversation_with_supabase(embedding, transcript)
                     print(f"{supabase_status=}")
+                    if supabase_status['success']:
+                        pinecone_response = upload_transcript(transcript_path, 
+                                        conversation_id=supabase_status['conversation_id'],
+                                        person_id=supabase_status['person_id'],
+                                        created_at_unix_ts=supabase_status['created_at'])
+                        print(f"{pinecone_response=}")
 
             elif word == "bye":
                 if picam2 is not None and audio_recording:
