@@ -7,12 +7,40 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-def transcribe_audio(audio_file: str = "/Users/nehabalamurugan/Downloads/New Recording 41.m4a", start_phrase: str = "hi i'm neha"):
+def transcribe_audio(audio_file: str = "/Users/nehabalamurugan/Downloads/New Recording 43.m4a", start_phrase: str = "hi i'm neha"):
   aai.settings.api_key = os.getenv('ASSEMBLYAI_API_KEY')
+  
+  if not aai.settings.api_key:
+    raise ValueError("ASSEMBLYAI_API_KEY not found in environment variables")
 
-  config = aai.TranscriptionConfig(speech_model=aai.SpeechModel.universal,speaker_labels=True,summarization=True,summary_model="informative",summary_type="bullets")
+  print(f"Starting transcription of: {os.path.basename(audio_file)}")
+  print("This may take several minutes for long audio files...")
 
-  transcript = aai.Transcriber(config=config).transcribe(audio_file)
+  config = aai.TranscriptionConfig(
+    speech_model=aai.SpeechModel.universal,
+    speaker_labels=True,
+    summarization=True,
+    summary_model="informative",
+    summary_type="bullets"
+  )
+
+  # Use transcribe_async for longer files
+  transcriber = aai.Transcriber(config=config)
+  
+  try:
+    # For files longer than 5 minutes, use async transcription
+    transcript = transcriber.transcribe(audio_file)
+    
+    # Wait for completion if it's still processing
+    while transcript.status not in ['completed', 'error']:
+      print(f"Status: {transcript.status}... waiting")
+      transcript = transcriber.get_transcript(transcript.id)
+      import time
+      time.sleep(5)  # Wait 5 seconds before checking again
+    
+  except Exception as e:
+    print(f"Transcription error: {e}")
+    raise
 
   if transcript.status == "error":
         raise RuntimeError(f"Transcription failed: {transcript.error}")
@@ -41,9 +69,7 @@ def transcribe_audio(audio_file: str = "/Users/nehabalamurugan/Downloads/New Rec
 
   # Construct final JSON-style object
   conversation_chunk = {
-      "conversation_id": audio_file.split("/")[-1].split(".")[0],
-      "turns": turns,
-      "summary": transcript.summary if hasattr(transcript, "summary") else None
+      "turns": turns
   }
 
   return conversation_chunk
