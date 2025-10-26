@@ -57,9 +57,15 @@ def main():
                 if picam2 is None:
                     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                     picam2 = Picamera2()
-                    config = picam2.create_video_configuration(main={"format": "RGB888", "size": (1920, 1080)}, controls={"FrameDurationLimits": (33333, 33333)})
+                    config = picam2.create_video_configuration(main={"format": "RGB888", "size": (1920, 1080)})
                     picam2.configure(config)
-                    picam2.set_controls({"AfMode": 2, "AeEnable": True, "AwbEnable": True})
+                    picam2.set_controls({
+                        "AwbEnable": True,
+                        "AeEnable": True,
+                        "Brightness": 0.0,
+                        "Contrast": 1.1,
+                        "Saturation": 1.3,
+                    })
                     picam2.start()
 
                     # Start video recording
